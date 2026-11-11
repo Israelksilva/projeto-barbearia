@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PUBLIC_URL: https://${DOMAIN:?Configure DOMAIN no arquivo .env}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      DB_PATH: /app/data/agenda.sqlite
+    volumes:
+      - agenda:/app/data
+    networks:
+      - private
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Configure DOMAIN no arquivo .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    networks:
+      - private
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  agenda:
+  certificates:
+  caddy_config:
+networks:
+  private:

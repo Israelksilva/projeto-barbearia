@@ -1,0 +1,1 @@
+{"name":"traco-barbearia","version":"2.1.0","private":true,"type":"module","scripts":{"start":"node --env-file-if-exists=.env server.mjs","test":"node --test test.mjs","backup":"node --env-file-if-exists=.env maintenance.mjs backup"},"engines":{"node":">=24"}}

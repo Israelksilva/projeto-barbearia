@@ -1,0 +1,7 @@
+data/
+work/
+.env
+node_modules/
+.git/
+*.zip
+PRIMEIRO-ACESSO.txt

@@ -1,0 +1,8 @@
+{
+  "folders": [{ "path": "." }],
+  "settings": {
+    "files.encoding": "utf8",
+    "editor.tabSize": 2,
+    "files.exclude": { "**/agenda.sqlite-wal": true, "**/agenda.sqlite-shm": true }
+  }
+}
