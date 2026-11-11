@@ -22,3 +22,4 @@ dialog{background:#19191b;color:#f0ece3;border:1px solid #655132;box-shadow:0 30
 /* Logo original enviada pelo proprietário, preservada integralmente. */
 header .brand-logo{width:88px;height:88px;object-fit:contain;flex-shrink:0}header .brand{gap:6px}.admin-header .brand-logo{width:76px;height:76px}.admin-header .brand{font-size:18px}
 @media(max-width:760px){header .brand-logo{width:62px;height:62px}header .brand{gap:3px;font-size:13px}header .brand [data-brand]{max-width:105px}.admin-header .brand-logo{width:58px;height:58px}.admin-header .brand{font-size:13px}.admin-header .brand [data-brand]{max-width:90px}}
+.copyright{display:block;width:100%;font-size:11px;line-height:1.7;color:#b6a583;padding-top:12px}.copyright-footer{max-width:none;padding:18px 35px;background:#111113;border-top:1px solid #38332b}.copyright-footer .copyright{padding:0}@media(max-width:760px){.copyright-footer{padding:18px 20px}}

@@ -98,3 +98,11 @@ Antes do primeiro cliente real: configure os contatos, confira serviços e horá
 ## Atualização visual 2.1
 
 Tema preto e dourado aplicado à página pública, formulários e painel. Imagens ilustrativas geradas por IA incluídas localmente em public/assets, sem depender de sites de fotos externos. A foto personalizada no painel prevalece sobre a imagem padrão. Consulte IMAGENS.md para os prompts usados. Aparência verificada em desktop e celular.
+
+## Direitos autorais
+
+© 2026 Israelksilva. Todos os direitos reservados.
+
+A disponibilização do código neste repositório não concede uma licença geral para uso ou comercialização. Para autorizações e licenciamento comercial, entre em contato com [Israelksilva](https://github.com/Israelksilva). Consulte o arquivo [LICENSE](LICENSE).
+
+Como o repositório é público, continuam valendo os direitos de visualização e fork previstos nos termos do GitHub. Referência: [Licenciamento de repositórios](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
