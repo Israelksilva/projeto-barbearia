@@ -6,12 +6,13 @@
 4. Abra Terminal > Novo Terminal e execute:
 
 ```sh
+npm ci
 npm start
 ```
 
 5. Abra http://localhost:3000. O painel está em http://localhost:3000/admin.
 
-Não precisa executar npm install: esta versão utiliza apenas recursos incluídos no Node.js.
+A versão 3 usa o cliente oficial libSQL. Execute npm ci na primeira abertura para instalar as dependências fixadas no package-lock.json.
 
 Também é possível usar Terminal > Executar Tarefa > Barbearia: iniciar. Para testes, execute npm test ou a tarefa Barbearia: testar.
 

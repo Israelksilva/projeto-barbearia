@@ -1,7 +1,9 @@
 FROM node:24-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DB_PATH=/app/data/agenda.sqlite
-COPY --chown=node:node package.json server.mjs maintenance.mjs ./
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --chown=node:node server.mjs maintenance.mjs ./
 COPY --chown=node:node lib ./lib
 COPY --chown=node:node public ./public
 RUN mkdir -p /app/data && chown node:node /app/data

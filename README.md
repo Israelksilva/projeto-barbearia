@@ -1,108 +1,105 @@
-# Traço Barbearia — versão comercial 2.0
+# Barbearia Teste — versão 3.0
 
-Sistema de agendamento para uma barbearia por instalação. Código sem dependências npm externas, com Node.js 24+ e banco SQLite persistente. O projeto original enviado serviu como referência de proposta; esta entrega é a reconstrução independente iniciada neste chat.
+Agendamento de uma barbearia por instalação, com página pública, painel do proprietário, serviços, equipe, contas de clientes, remarcação, cancelamento e personalização. Tema preto e dourado, logo enviada pelo proprietário e imagens ilustrativas.
 
-## Abrir agora no Windows
+## Hospedagem gratuita para demonstração
 
-1. Instale Node.js 24 ou superior.
-2. Extraia o ZIP em uma pasta privada e abra `INICIAR.bat`.
-3. Acesse http://localhost:3000/admin.
-4. Abra `data/PRIMEIRO-ACESSO.txt`, gerado na primeira inicialização, e use o código para criar a conta do proprietário. Não há senha padrão.
-5. Salve a chave de recuperação exibida após o cadastro. Ela permite recuperar sua conta mesmo sem e-mails configurados.
-6. No painel, personalize a marca e cadastre equipe, serviços, preços e expediente.
-7. A página dos clientes fica em http://localhost:3000.
+Esta versão suporta **Render Free + banco externo Turso/libSQL**. Banco, contas, reservas, configurações e imagens enviadas pelo painel ficam no Turso. Reiniciar ou substituir o disco da Render não apaga esses dados, desde que você continue usando o mesmo banco e token válidos.
 
-O terminal precisa ficar aberto enquanto o sistema é usado. Para interromper, pressione Ctrl+C. Em uso local, ele só atende o próprio computador. O ZIP não contém banco, contas, credenciais nem dados de demonstração.
+A conta e o banco reais do Turso ainda precisam ser criados e conectados. A entrega não contém credenciais e não publica automaticamente o serviço.
 
-## O que foi implementado
+1. Crie uma conta Free em https://app.turso.tech e um banco compatível com libSQL.
+2. Obtenha a URL libsql://... e um token de acesso desse banco.
+3. Na Render, conecte o repositório privado e escolha Docker, branch main, raiz vazia e compute Free. Não adicione disco pago.
+4. Adicione as variáveis abaixo no painel Environment da Render. Não envie tokens pelo chat e não os coloque no GitHub.
 
-- Conta do proprietário, painel protegido e sessões HttpOnly com validade de sete dias.
-- Conta de cliente, login em outros dispositivos, troca de senha, recuperação por chave e recuperação por e-mail quando configurado.
-- Verificação de e-mail para receber mensagens de reservas.
-- Serviços editáveis com preço em centavos e duração de 15 a 360 minutos, em múltiplos de 15.
-- Equipe com expediente próprio, dias da semana e intervalo; todos atendem os serviços ativos.
-- Disponibilidade considerando duração, intervalo, bloqueios, reservas existentes e horário passado.
-- Transações SQLite para impedir conflitos de atendimento, inclusive entre serviços de durações diferentes.
-- Agendamento pelo cliente e lançamento manual pelo proprietário.
-- Remarcação, cancelamento e registro de atendido ou falta.
-- Preço, nome e duração preservados na reserva mesmo quando o catálogo muda.
-- Indicadores diários: confirmados, atendidos, cancelados e soma dos valores atendidos. Não se trata de confirmação bancária de pagamento.
-- Personalização do nome, apresentação, endereço, WhatsApp, logo, foto e política de cancelamento.
-- Exportação CSV da agenda e download dos dados do cliente.
-- Exclusão da conta de cliente com cancelamento e remoção dos dados de contato no banco principal.
-- Backups automáticos, download de cópia e histórico de ações administrativas.
-- Fila de e-mails com confirmação, remarcação, cancelamento, verificação, recuperação e lembrete 24 horas antes.
-- Botão de confirmação manual no WhatsApp e arquivo de calendário ICS para o cliente.
-- Layout para desktop e celular, navegação por teclado, validações no servidor, proteção de origem e limitação de tentativas.
+| Variável | Valor |
+|---|---|
+| TURSO_DATABASE_URL | URL libsql://... fornecida pelo Turso |
+| TURSO_AUTH_TOKEN | Token privado com permissão de leitura e escrita nesse banco |
+| SETUP_TOKEN | Valor aleatório de 32 a 128 caracteres; use Generate na Render |
+| NODE_ENV | production |
+| HOST | 0.0.0.0 |
 
-## Regras importantes
+O endereço público é detectado por RENDER_EXTERNAL_URL. Se você usar outra hospedagem ou domínio próprio, configure PUBLIC_URL com o endereço HTTPS, sem barra final.
 
-- Fuso de operação: America/Bahia (UTC−03), sem configuração para outros fusos nesta versão.
-- Reservas online nos próximos 90 dias, com início em múltiplos de 15 minutos.
-- Cancelamento/remarcação pelo cliente exigem a antecedência configurada (padrão: duas horas). O proprietário pode cancelar ou remarcar reservas confirmadas sem essa antecedência.
-- Alterar expediente ou inativar um profissional exige resolver reservas futuras incompatíveis antes.
-- Bloqueios não atropelam reservas já existentes: o painel exige remarcar ou cancelar antes.
-- Status de atendido/falta só pode ser registrado a partir do horário de início. Não há reversão desses status pela interface nesta versão.
-- Reservas canceladas liberam a disponibilidade, preservando o histórico.
-- As primeiras reservas legadas são migradas com duração de 30 minutos, igual à versão antiga. O cliente precisa estar autenticado e manter o cookie antigo para acessá-las; o proprietário vê todas pelo painel. Faça backup antes de atualizar uma instalação real.
+Após o deploy, abra /admin e use o valor de SETUP_TOKEN para cadastrar o proprietário. O código nunca é enviado ao navegador pela API. Uma vez criado o proprietário, ele não permite criar outra conta administrativa. Guarde a chave de recuperação exibida.
 
-## E-mails e WhatsApp
+Também foi incluído render.yaml para uso opcional como Blueprint; ele não cria serviços sozinho. Ele solicita as duas variáveis do banco e gera SETUP_TOKEN. Confira plano Free antes de confirmar qualquer criação de serviço.
 
-O envio real de e-mails exige uma conta Resend, domínio de envio verificado e configuração das variáveis descritas em `.env.example`. Nenhum envio externo foi realizado na validação desta entrega.
+### Limites do modo gratuito
 
-Copie `.env.example` para `.env`, preencha `RESEND_API_KEY`, `EMAIL_FROM` e `PUBLIC_URL`, e reinicie. As chaves ficam somente no servidor. Não as coloque no código, no ZIP ou no chat.
+- A Render Free pode suspender o processo por inatividade; o primeiro acesso pode demorar para acordar a aplicação.
+- Lembretes por e-mail dependem de o processo estar rodando. Podem atrasar após suspensão; não há garantia de envio pontual no Free.
+- O plano gratuito do Turso tem limites de armazenamento, leitura e escrita. Monitore a conta e não ative cobrança excedente sem decidir por isso.
+- A persistência depende da disponibilidade do provedor e da manutenção do banco. Exclusão da conta/banco ou perda das credenciais pode interromper o serviço.
+- Este caminho é para demonstração e piloto acompanhado. Antes de vender operação contínua, valide custos, disponibilidade, privacidade e cópias externas com o cliente.
 
-A fila é processada a cada 30 segundos, com até cinco tentativas e espera crescente entre falhas. O servidor precisa estar permanentemente ligado. Somente e-mails confirmados recebem mensagens de agendamento. Reservas feitas menos de 24h antes recebem confirmação, sem lembrete retroativo. Reagendar invalida lembretes pendentes da versão anterior. O estado “aceito pelo provedor” não comprova entrega na caixa de entrada. Não há rastreamento de abertura, bounces ou webhook de entrega nesta versão.
+Referências: [Render Free](https://render.com/docs/free), [Turso Free](https://turso.tech/pricing?frequency=monthly), [cliente libSQL](https://docs.turso.tech/sdk/ts/reference).
 
-O WhatsApp abre uma mensagem preenchida para o proprietário revisar e enviar. Não há disparo automático de WhatsApp nem dependência de API da Meta. Pagamentos são realizados no estabelecimento; não há gateway de cobrança ou PIX conciliado.
+## Abrir no VS Code e executar localmente
 
-Referência do provedor de e-mail: https://resend.com/docs/api-reference/emails/send-email
+Requer Node.js 24+. Abra a pasta que contém package.json e execute:
 
-## Dados e backup
+```sh
+npm ci
+npm start
+```
 
-A pasta `data/` é privada. Ela contém o banco, mídias e backups; nunca publique essa pasta como arquivos estáticos.
+Sem TURSO_DATABASE_URL, usa o SQLite local em data/agenda.sqlite e preserva bancos da versão anterior. O código de primeiro acesso local fica em data/PRIMEIRO-ACESSO.txt.
 
-- Banco: `data/agenda.sqlite` e seus arquivos WAL/SHM enquanto estiver aberto.
-- Imagens: `data/media/`.
-- Backups: `data/backups/`, até 14 arquivos automáticos mantidos pelo servidor.
-- Backup automático: na inicialização e a cada 24 horas enquanto o servidor roda.
-- Backup completo do banco pelo painel: Dados e segurança > Baixar backup.
-- Backup pelo terminal: `npm run backup`.
+Copie .env.example para .env se quiser configurar outro PORT ou usar um banco remoto localmente. Nunca compartilhe .env, data ou node_modules. Não execute uma segunda instância na mesma porta.
 
-Backups no mesmo disco protegem contra alterações acidentais, mas não contra perda do servidor. Configure cópia externa, privada e criptografada com o provedor de hospedagem. Copie também as imagens. A política de retenção deve ser revista com a barbearia antes de atender clientes reais.
+## Funções disponíveis
 
-Para restaurar: desligue o servidor, faça uma cópia da pasta data atual, mova o banco atual e seus arquivos `-wal` e `-shm` para uma pasta de preservação e coloque o backup desejado como `data/agenda.sqlite`. Restaure as imagens correspondentes. Com o servidor ainda parado, execute `node --env-file-if-exists=.env maintenance.mjs check`; o resultado esperado é `ok`. Depois inicie novamente. Nunca substitua o banco com o servidor ligado. Uma restauração pode recuperar sessões antigas ainda válidas; revogue-as se necessário.
+- Conta do proprietário e de clientes com senha, sessão HttpOnly, recuperação e verificação de e-mail.
+- Cadastro de serviços com preço e duração variável, equipe com expediente/intervalo próprio e bloqueios por data.
+- Agenda por profissional, proteção contra sobreposição de horários, remarcação e cancelamento.
+- Reservas manuais, registro de atendido/falta e indicadores diários. Valores atendidos não confirmam recebimentos bancários.
+- Nome, telefone, endereço, apresentação, logo e foto editáveis.
+- Exportação da agenda CSV, arquivo ICS de horário e exportação dos dados do cliente.
+- Exclusão da conta com cancelamento e remoção dos dados de contato no banco principal.
+- WhatsApp com mensagem preenchida para envio manual. Não há disparo automático de WhatsApp.
+- Pagamento no estabelecimento. Não inclui gateway de pagamentos, estoque, comissões ou emissão fiscal.
 
-Se o proprietário perder senha e chave e não tiver e-mail configurado, a pessoa com acesso ao servidor pode gerar uma nova chave com `node --env-file-if-exists=.env maintenance.mjs recover-owner`. Esse comando revoga as sessões do dono e invalida a chave anterior. Restrinja o acesso ao servidor.
+Todos os profissionais ativos atendem o catálogo. Reservas nos próximos 90 dias, em intervalos de 15 minutos. Fuso America/Bahia, UTC−03. O cancelamento pelo cliente segue a antecedência configurada. Reservas antigas mantêm preço e duração originais.
 
-## Publicação
+## E-mails
 
-Leia `PUBLICAR.md`. A entrega inclui Dockerfile, Docker Compose, proxy Caddy e configuração de HTTPS para um domínio que você controle. Não foram contratados domínio, hospedagem ou e-mail. Não há URL pública publicada nesta entrega.
+Para envio real, configure RESEND_API_KEY e EMAIL_FROM (remetente verificado) no servidor. O endereço do site vem de PUBLIC_URL ou RENDER_EXTERNAL_URL. O envio não está ativado apenas por cadastrar uma conta de cliente.
 
-Este backend usa disco persistente. Não publique em hospedagem de arquivos estáticos ou em função sem persistência local. A hospedagem Sites disponível neste ambiente executa Cloudflare Workers/D1 e não executa este servidor Node/SQLite sem uma adaptação de backend. Por isso não foi publicado um front-end que deixaria a agenda desconectada.
+Confirmações, remarcações, cancelamentos e lembretes são enviados somente para e-mails verificados. A fila registra falhas e tentativas; aceite pelo provedor não comprova entrega na caixa de entrada. Sem provedor, login e recuperação por chave continuam funcionando. E-mails externos não foram enviados nos testes.
 
-## Testes
+## Backup e migração
 
-Na pasta do projeto: `npm test`.
+No modo Turso, o painel baixa um backup JSON com os dados e as imagens enviadas. Guarde uma cópia privada e criptografada fora da Render. Não há backup automático durável no disco gratuito da Render.
 
-A suíte usa bancos temporários e cobre setup, autenticação, permissões, conflitos simultâneos, duração, intervalos, bloqueios, remarcação com preço original, cancelamento, recuperação, exclusão, exportação, backup, reinício, fila de e-mails e migração da primeira versão.
+No modo SQLite local, o download continua sendo .sqlite; o servidor mantém até 14 cópias no disco local, feitas a cada inicialização e a cada 24 horas de funcionamento. Imagens novas são armazenadas no próprio banco. Imagens de instalações antigas ainda podem estar em data/media e devem ser preservadas.
 
-Também foram verificados no navegador o login do dono, cadastro de serviço, reserva manual e reserva pela página pública; layout do painel em largura de celular. Os testes de transporte de e-mails usam uma função controlada, sem enviar mensagens reais. Docker e publicação externa precisam ser validados na hospedagem escolhida.
+Para migrar uma instalação local existente para um banco Turso novo e vazio:
 
-## Escopo comercial
+1. Faça backup e pare o servidor local. Não altere o arquivo original durante a importação.
+2. Configure as credenciais do banco de destino em .env.
+3. No PowerShell:
 
-Uma instalação atende uma barbearia com vários profissionais. Para vender a outra, instale o pacote limpo com outro banco, outro domínio e outras credenciais. Não é um SaaS que separa várias empresas no mesmo banco, e não inclui cobrança de mensalidades dos seus clientes, estoque, comissões ou contabilidade.
+```powershell
+$env:CONFIRM_IMPORT = 'sim'
+npm run db:import -- 'C:\caminho\data\agenda.sqlite'
+Remove-Item Env:CONFIRM_IMPORT
+```
 
-Antes do primeiro cliente real: configure os contatos, confira serviços e horários com o proprietário, personalize o aviso de privacidade, valide HTTPS e backup/restauração na hospedagem e faça uma reserva piloto completa com confirmação de e-mail. A entrega não substitui uma auditoria de segurança independente.
+No Linux/macOS: `CONFIRM_IMPORT=sim npm run db:import -- /caminho/agenda.sqlite`.
 
-## Atualização visual 2.1
+O mesmo comando aceita um backup JSON criado por esta versão. A operação recusa destinos que já tenham contas ou reservas e reverte toda a importação em caso de erro. Ela inclui imagens antigas referenciadas em data/media. Não sobrescreve nem exclui o banco original. A migração não é executada automaticamente e não foi aplicada aos seus dados neste computador.
 
-Tema preto e dourado aplicado à página pública, formulários e painel. Imagens ilustrativas geradas por IA incluídas localmente em public/assets, sem depender de sites de fotos externos. A foto personalizada no painel prevalece sobre a imagem padrão. Consulte IMAGENS.md para os prompts usados. Aparência verificada em desktop e celular.
+Verificar conexão: `npm run db:check`. Exportar backup por terminal: `npm run backup`. Recuperação administrativa offline: `node --env-file-if-exists=.env maintenance.mjs recover-owner` (gera chave nova e revoga sessões do dono).
+
+## Verificação desta entrega
+
+`npm test` testa os fluxos com SQLite nativo e com o cliente libSQL usando um arquivo local dedicado de teste. Inclui concorrência, isolamento de clientes, reinício com disco da aplicação novo, imagens, backup, importação, rollback e restauração JSON. Não substitui a validação final com a URL e o token reais do Turso, que precisam ser criados pelo proprietário.
+
+Docker e deploy na Render ainda precisam ser executados na conta real. Não há serviço externo novo contratado nesta entrega.
 
 ## Direitos autorais
 
-© 2026 Israelksilva. Todos os direitos reservados.
-
-A disponibilização do código neste repositório não concede uma licença geral para uso ou comercialização. Para autorizações e licenciamento comercial, entre em contato com [Israelksilva](https://github.com/Israelksilva). Consulte o arquivo [LICENSE](LICENSE).
-
-Como o repositório é público, continuam valendo os direitos de visualização e fork previstos nos termos do GitHub. Referência: [Licenciamento de repositórios](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+© 2026 Israelksilva. Todos os direitos reservados. Consulte [LICENSE](LICENSE).

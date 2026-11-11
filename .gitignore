@@ -10,5 +10,7 @@ node_modules/
 *.key
 *.zip
 *.log
+traco-backup-*.json
+work-test-*/
 .DS_Store
 Thumbs.db

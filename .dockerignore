@@ -1,7 +1,8 @@
 data/
-work/
-.env
 node_modules/
 .git/
+.env
+.env.*
+!.env.example
 *.zip
-PRIMEIRO-ACESSO.txt
+work-test-*/
