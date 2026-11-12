@@ -1,6 +1,8 @@
 // Configuração pública. Nunca coloque tokens ou senhas neste arquivo.
 export const config = {
   name: 'Barbearia Teste',
+  demo: true, // Manter true no GitHub Pages. Operação comercial exige outra hospedagem.
+  business: {legalName:'', document:'', address:'', privacyEmail:'', retentionPolicy:''},
   apiBaseUrl: '', // Ex.: https://api.sua-barbearia.com (HTTPS)
   whatsapp: '', // Código do país + DDD + número, apenas dígitos.
   address: '',

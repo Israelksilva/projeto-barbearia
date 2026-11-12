@@ -1,12 +1,12 @@
 import {config} from './config.js';
 import {createApi} from './api.js';
-const $=s=>document.querySelector(s), api=createApi(config.apiBaseUrl);
+const $=s=>document.querySelector(s), api=createApi(config.demo ? '' : config.apiBaseUrl);
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n/100);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dialog=$('#booking'),form=$('#request-form');
 let services=config.services, staff=[], selected, key, slotVersion=0, sending=false, catalogReady=!api.enabled;
 let phone=config.whatsapp.replace(/\D/g,'');
-const whatsappReady=/^55\d{10,11}$/.test(phone);
+const whatsappReady=!config.demo && /^55\d{10,11}$/.test(phone);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 function toast(s){$('#toast').textContent=s;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,4500);}
 function render(){
@@ -14,6 +14,7 @@ function render(){
 }
 render();
 document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=config.name);
+if(!config.demo){$('.demo-banner').hidden=true;}
 document.title=config.name+' · Cabelo, barba e estilo';
 for(const [id,value] of [['#business-address',config.address],['#business-hours',config.hours]]){if(value){$(id).textContent=value;$(id).hidden=false;}}
 if(whatsappReady){$('#contact-link').href='https://wa.me/'+phone;$('#contact-link').hidden=false;$('#contact-status').textContent='Fale com a gente para combinar seu próximo horário.';}
@@ -23,8 +24,9 @@ function showError(s){$('#form-error').textContent=s;}
 function resetResult(){$('#request-result').hidden=true;$('#whatsapp-send').hidden=true;}
 function open(service){
  selected=service;slotVersion++;key=crypto.randomUUID();form.querySelectorAll('input,select,textarea').forEach(x=>x.disabled=false);form.reset();resetResult();showError('');$('#submit-request').disabled=false;
+ if(config.demo){form.elements.name.value='Cliente de demonstração';form.elements.phone.value='(00) 00000-0000';for(const n of ['name','phone','notes'])form.elements[n].readOnly=true;form.elements.notes.placeholder='Campo desativado na demonstração';}
  $('#dialog-title').textContent=service.name;$('#service-summary').textContent=money(service.price)+' · '+service.duration+' minutos · pagamento no local';
- $('#mode-note').textContent=api.enabled?'Consulte a disponibilidade e envie seu pedido. Aguarde o resultado antes de reenviar.':whatsappReady?'Você vai revisar a mensagem e enviá-la pelo WhatsApp. Aguarde a confirmação da barbearia.':'Modo de apresentação: você pode revisar e copiar o pedido. Ele não será enviado e nenhum horário será reservado.';
+ $('#mode-note').textContent=api.enabled?'Consulte a disponibilidade e envie seu pedido. Aguarde o resultado antes de reenviar.':whatsappReady?'Você vai revisar a mensagem e enviá-la pelo WhatsApp. Aguarde a confirmação da barbearia.':'Demonstração com dados fictícios: não informe dados pessoais. O pedido não será enviado e nenhum horário será reservado.';
  $('#submit-request').textContent=api.enabled?'Enviar pedido ↗':'Revisar pedido ↗';
  form.elements.date.min=today();const max=new Date();max.setDate(max.getDate()+90);form.elements.date.max=[max.getFullYear(),String(max.getMonth()+1).padStart(2,'0'),String(max.getDate()).padStart(2,'0')].join('-');
  $('#staff-label').hidden=!api.enabled;form.elements.staff.required=api.enabled;
@@ -52,8 +54,8 @@ form.onsubmit=async e=>{
  if(f.name.value.trim().length<2){showError('Informe seu nome.');f.name.focus();return;}
  const time=api.enabled?f.slot.value:f.time.value;
  if(!time||f.date.value<today()||new Date(f.date.value+'T'+time)<=new Date()){showError('Escolha uma data e um horário futuros.');return;}
- const payload={service:selected.id,name:f.name.value.trim(),phone:digits,date:f.date.value,time,notes:f.notes.value.trim(),consent:true};
- const message=`Olá! Gostaria de solicitar um horário.\nServiço: ${selected.name}\nValor: ${money(selected.price)}\nDuração: ${selected.duration} minutos\nNome: ${payload.name}\nTelefone: ${digits}\nDia: ${payload.date.split('-').reverse().join('/')}\nHorário desejado: ${time}${payload.notes?'\nObservação: '+payload.notes:''}\nAguardo confirmação da disponibilidade.`;
+ const payload={service:selected.id,name:f.name.value.trim(),phone:digits,date:f.date.value,time,notes:f.notes.value.trim(),privacyNoticeAcknowledged:true};
+ const message=`Olá! Gostaria de solicitar um horário.\nServiço: ${selected.name}\nValor: ${money(selected.price)}\nDuração: ${selected.duration} minutos\nNome: ${payload.name}\nTelefone: ${config.demo?'fictício (demonstração)':digits}\nDia: ${payload.date.split('-').reverse().join('/')}\nHorário desejado: ${time}${payload.notes?'\nObservação: '+payload.notes:''}\nAguardo confirmação da disponibilidade.`;
  $('#message-preview').textContent=message;
  if(api.enabled){
   payload.staff=f.staff.value;sending=true;$('#submit-request').disabled=true;$('#submit-request').textContent='Enviando…';

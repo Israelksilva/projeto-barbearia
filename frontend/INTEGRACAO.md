@@ -19,3 +19,6 @@ Validar e limitar campos no servidor; determinar preço/duração pelo catálogo
 Página pronta para apresentação não equivale a sistema operacional completo. Confirmar preços, contato, endereço, expediente e direitos das imagens; preencher identificação e política de privacidade; testar WhatsApp real. Para ativar reservas, implementar API, testar concorrência, fusos, indisponibilidade, retries, permissões, backups e fluxo completo com clientes em dispositivos diferentes. Login e painel da versão Node não são publicados como funcionalidades da página estática.
 
 Checks: node --test frontend/api.test.mjs; node --check frontend/site.js.
+
+## Revisão brasileira
+config.demo=true desativa transmissão por API/WhatsApp e usa dados fictícios. O payload proposto substitui consent por privacyNoticeAcknowledged:true (ciência, não consentimento geral). Leia CONFORMIDADE-BR.md antes de ativar e atualize o contrato do backend para esse campo. GitHub Pages permanece apenas demonstração.
