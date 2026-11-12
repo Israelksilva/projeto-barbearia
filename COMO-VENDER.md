@@ -1,45 +1,23 @@
-# Como apresentar e entregar a Traço
+# Oferta e entrega: distinguir as versões
 
-## O que você vende
+## Pacote inicial — site + pedido manual pelo WhatsApp
+Uma página com a marca da barbearia, catálogo, preços/duração, contatos e formulário para preparar mensagem. O visitante envia manualmente pelo WhatsApp e a barbearia confirma disponibilidade. Não bloqueia horário, não cobra e não possui agenda compartilhada.
 
-Uma página de agendamento com a marca da barbearia e um painel para o dono administrar sua equipe. O cliente escolhe serviço, barbeiro e horário; o dono acompanha a agenda e pode registrar reservas recebidas por telefone ou balcão.
+O GitHub Pages permanece como demonstração fictícia: dados de exemplo, preços ilustrativos e transmissão desativada por config.demo=true. A operação comercial precisa de hospedagem compatível, identificação real, contato privado, políticas correspondentes ao fluxo e testes de implantação. A cópia demonstrativa e a instalação comercial são separadas.
 
-Frase para demonstração:
-
-> Seu cliente agenda pelo celular e você acompanha os atendimentos em uma agenda organizada, com a marca da sua barbearia.
-
-Não prometa redução garantida de faltas, aumento de faturamento ou envio automático de WhatsApp. Esses resultados não foram medidos, e o WhatsApp desta versão é manual.
-
-## Modelo de proposta
-
-- Implantação: configuração da marca, serviços, profissionais, horários e treinamento do proprietário.
-- Mensalidade: hospedagem, acompanhamento de backups, manutenção e suporte com canais e horários definidos.
-- Custos de domínio e e-mails: especificar quem contrata, os limites e a cobrança por uso.
-- Dados: definir responsável, acesso, exportação e procedimento de encerramento.
-- Escopo: listar o que está incluído e cobrar separadamente novas funcionalidades fora desse escopo.
-
-Defina o preço depois de calcular infraestrutura, serviços externos, tempo de implantação, suporte e margem. Esta entrega não criou um sistema para cobrar a mensalidade dos seus clientes.
+## Versão Node e backend futuro
+O repositório preserva uma aplicação Node com cadastro, painel e banco, mas ela NÃO é executada pelo GitHub Pages. A nova interface tem um adaptador de API e contrato descrito em frontend/INTEGRACAO.md; POST /api/booking-requests ainda precisa ser implementado/adaptado e testado. Não vender esses recursos como operacionais só porque os arquivos existem.
 
 ## Implantação do primeiro cliente
+1. Diagnosticar necessidade, separar agenda automática de pedido manual e aprovar escopo.
+2. Confirmar direitos dos materiais, identificação das partes, proposta, licença e enquadramento fiscal com os profissionais responsáveis.
+3. Definir domínio/hospedagem/custos e titularidade das contas com autorização do cliente.
+4. Personalizar serviços, preços/duração, marca, contato, endereço, expediente e políticas; nunca publicar contratos ou documentos pessoais.
+5. Testar em celular/desktop, links, teclado, erros de formulário, preço e destino da mensagem; enviar teste somente ao contato autorizado.
+6. Registrar aceite expresso e orientar confirmação, remarcação/cancelamento e contato privado.
+7. Fazer piloto acompanhado e combinar manutenção opcional; não prometer resultados econômicos.
 
-1. Apresente a página pública e o painel usando somente dados de demonstração.
-2. Confirme com o dono os serviços, durações, preços e horários de cada profissional.
-3. Instale um pacote limpo em domínio e banco próprios; não distribua seu banco de demonstração.
-4. Faça o dono criar a própria senha e guardar a chave de recuperação.
-5. Revise o aviso de privacidade e os contatos com o estabelecimento.
-6. Ative e valide e-mail e backups no ambiente real.
-7. Teste uma reserva completa pelo celular e outra por outro navegador.
-8. Ensine reserva manual, bloqueio, cancelamento, remarcação e recuperação.
-9. Faça o piloto acompanhado antes de abrir para todos os clientes.
+Referências de preparação brasileira: frontend/CONFORMIDADE-BR.md. Modelos comerciais privados são entregues separadamente, não devem ser publicados preenchidos neste repositório.
 
-## Limitações para explicar ao comprador
+Licença deve definir uso da instância, entrega de arquivos, manutenção, custos externos e encerramento. O acesso ao repositório não autoriza revenda geral, e aviso de copyright não substitui direitos/licenças de terceiros. Nenhum material é certificação de conformidade ou parecer jurídico.
 
-- Pagamento é no estabelecimento.
-- WhatsApp tem envio manual; e-mails automáticos dependem do provedor configurado.
-- Um proprietário administrador por instalação; profissionais não têm logins próprios.
-- Todos os profissionais ativos atendem os serviços disponíveis.
-- O expediente semanal é uniforme nos dias selecionados; exceções e folgas usam bloqueios.
-- Não inclui estoque, comissões, emissão fiscal, conciliação de pagamentos ou aplicativo nas lojas.
-- A agenda usa o fuso UTC−03 e janela de 90 dias.
-
-Esses pontos devem aparecer na proposta para a barbearia saber exatamente o que está comprando.
