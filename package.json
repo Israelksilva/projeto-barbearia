@@ -1,11 +1,11 @@
 {
   "name": "traco-barbearia",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
-    "test": "node --test test.mjs",
+    "test": "node --test test.mjs backend.test.mjs",
     "backup": "node --env-file-if-exists=.env maintenance.mjs backup",
     "db:check": "node --env-file-if-exists=.env maintenance.mjs check",
     "db:import": "node --env-file-if-exists=.env maintenance.mjs import"

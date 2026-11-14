@@ -6,7 +6,7 @@ Uma página com a marca da barbearia, catálogo, preços/duração, contatos e f
 O GitHub Pages permanece como demonstração fictícia: dados de exemplo, preços ilustrativos e transmissão desativada por config.demo=true. A operação comercial precisa de hospedagem compatível, identificação real, contato privado, políticas correspondentes ao fluxo e testes de implantação. A cópia demonstrativa e a instalação comercial são separadas.
 
 ## Versão Node e backend futuro
-O repositório preserva uma aplicação Node com cadastro, painel e banco, mas ela NÃO é executada pelo GitHub Pages. A nova interface tem um adaptador de API e contrato descrito em frontend/INTEGRACAO.md; POST /api/booking-requests ainda precisa ser implementado/adaptado e testado. Não vender esses recursos como operacionais só porque os arquivos existem.
+O repositório preserva uma aplicação Node com cadastro, painel e banco, mas ela NÃO é executada pelo GitHub Pages. A nova interface tem um adaptador de API e contrato descrito em frontend/INTEGRACAO.md; POST /api/booking-requests foi implementado como alias autenticado na versão 3.1 e testado localmente; conexão remota/deploy ainda precisam de homologação. Não vender esses recursos como operacionais só porque os arquivos existem.
 
 ## Implantação do primeiro cliente
 1. Diagnosticar necessidade, separar agenda automática de pedido manual e aprovar escopo.
@@ -20,4 +20,3 @@ O repositório preserva uma aplicação Node com cadastro, painel e banco, mas e
 Referências de preparação brasileira: frontend/CONFORMIDADE-BR.md. Modelos comerciais privados são entregues separadamente, não devem ser publicados preenchidos neste repositório.
 
 Licença deve definir uso da instância, entrega de arquivos, manutenção, custos externos e encerramento. O acesso ao repositório não autoriza revenda geral, e aviso de copyright não substitui direitos/licenças de terceiros. Nenhum material é certificação de conformidade ou parecer jurídico.
-

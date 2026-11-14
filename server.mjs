@@ -36,6 +36,9 @@ function staffInput(b) { const name = clean(b.name, 80), bio = clean(b.bio, 300)
 async function cancelAllowed(user, b) { if (user.role === 'owner')
     return; const shop = await get('SELECT cancelHours FROM shop WHERE id=1'); check(b.status === 'confirmed', 'A reserva não está ativa.'); check(stamp(b.date, b.start) - now() >= shop.cancelHours * 3600e3, `Cancelamento online disponível até ${shop.cancelHours}h antes. Fale com a barbearia.`); }
 function csv(rows) { const escape = v => '"' + String(v ?? '').replaceAll('"', '""') + '"'; return '\uFEFF' + rows.map(row => row.map(escape).join(';')).join('\r\n'); }
+const defaultLegal = {operatorName:'', businessId:'', address:'', privacyEmail:'', retention:'', enabled:false, version:'2026-11-14'};
+async function legalProfile() {const row=await get("SELECT value FROM meta WHERE key='business-profile'");return row?{...defaultLegal,...JSON.parse(row.value)}:{...defaultLegal};}
+async function requireOperationalProfile() {if(production)check((await legalProfile()).enabled,'A instalação ainda não foi liberada pelo proprietário. Use o contato da barbearia.',503);}
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost'), pathname = url.pathname;
     let user = null;
@@ -48,6 +51,7 @@ const server = http.createServer(async (req, res) => {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
     try {
+        if(!['GET','HEAD'].includes(req.method)&&!pathname.startsWith('/api/'))throw new AppError(405,'Método não permitido.');
         if (pathname.startsWith('/api/')) user = await sessionUser(req);
         if (pathname.startsWith('/api/')) {
             if (!['GET', 'HEAD'].includes(req.method)) {
@@ -75,9 +79,10 @@ const server = http.createServer(async (req, res) => {
             }
             const method = req.method;
             if (pathname === '/api/health' && method === 'GET')
-                return json(200, { ok: true });
+                {await get('SELECT 1 AS ok');return json(200, { ok: true, version:'3.1.0' });}
+            if (pathname === '/api/legal' && method === 'GET') return json(200, await legalProfile());
             if (pathname === '/api/catalog' && method === 'GET')
-                return json(200, { settings: await get('SELECT * FROM shop WHERE id=1'), services: await all('SELECT * FROM services WHERE active=1 ORDER BY rowid'), staff: await all('SELECT * FROM staff WHERE active=1 ORDER BY rowid'), today: today(), emailEnabled: emailReady(), storage:store.remote?'turso':'sqlite', setupSource:store.remote?'environment':'file', backupFormat:store.backupFormat, setupRequired: !await get("SELECT 1 FROM users WHERE role='owner'") });
+                return json(200, { legal: await legalProfile(), acceptingBookings:!production||(await legalProfile()).enabled, settings: await get('SELECT * FROM shop WHERE id=1'), services: await all('SELECT * FROM services WHERE active=1 ORDER BY rowid'), staff: await all('SELECT * FROM staff WHERE active=1 ORDER BY rowid'), today: today(), emailEnabled: emailReady(), storage:store.remote?'turso':'sqlite', setupSource:store.remote?'environment':'file', backupFormat:store.backupFormat, setupRequired: !await get("SELECT 1 FROM users WHERE role='owner'") });
             if (pathname === '/api/auth/me' && method === 'GET')
                 return json(200, { user: userView(user) });
             if (pathname === '/api/auth/setup' && method === 'POST') {
@@ -95,10 +100,11 @@ const server = http.createServer(async (req, res) => {
             }
             if (pathname === '/api/auth/register' && method === 'POST') {
                 throttle(`register:${ip}`, 15);
+                await requireOperationalProfile();
                 check(await get("SELECT 1 FROM users WHERE role='owner'"), 'A barbearia ainda está sendo configurada.', 503);
                 const name = clean(b.name), mail = email(b.email);
                 check(name.length >= 2 && validEmail(mail) && typeof b.password === 'string' && b.password.length >= 12 && b.password.length <= 200, 'Informe nome, e-mail válido e senha de 12 a 200 caracteres.');
-                check(b.privacy === true, 'Leia e aceite o aviso de privacidade para criar a conta.');
+                check(b.privacy === true, 'Leia o aviso de privacidade para criar a conta.');
                 const password = await passwordHash(b.password), id = randomUUID(), recoveryKey = secret();
                 check(!await get('SELECT 1 FROM users WHERE email=?', mail), 'Não foi possível cadastrar. Tente entrar ou recuperar sua conta.', 409);
                 await run('INSERT INTO users(id,name,email,password,recovery,role,created) VALUES(?,?,?,?,?,?,?)', id, name, mail, password, hash(recoveryKey), 'customer', now());
@@ -202,43 +208,55 @@ const server = http.createServer(async (req, res) => {
                 const legacy = req.headers.cookie?.match(/(?:^|; )owner=([a-f0-9-]{36})(?:;|$)/)?.[1] || '';
                 return json(200, (await all('SELECT * FROM appointments WHERE userId=? OR (legacyOwner=? AND legacyOwner IS NOT NULL) ORDER BY date DESC,start', user.id, legacy)).map(publicBooking));
             }
-            if ((pathname === '/api/bookings' || pathname === '/api/admin/bookings') && method === 'POST') {
+            if (['/api/bookings','/api/booking-requests','/api/admin/bookings'].includes(pathname) && method === 'POST') {
                 requireUser(user);
                 const admin = pathname.includes('/admin/');
-                if (admin)
-                    ownerOnly(user);
-                throttle(`booking:${user.id}`, 40);
-                check(typeof b.service === 'string' && b.service.length <= 80, 'Selecione um serviço.');
-                const service = await get('SELECT * FROM services WHERE id=? AND active=1', b.service);
-                check(service, 'Serviço indisponível.');
-                const name = admin ? clean(b.name, 80) : user.name, phone = String(b.phone || '').replace(/\D/g, '');
-                check(name.length >= 2 && /^\d{10,13}$/.test(phone), 'Informe nome e telefone com DDD.');
-                const start = parseTime(b.time), id = randomUUID();
-                await transaction(async () => { const staff = await ensureSlot(store, b.staff, b.date, start, service.duration); await run('INSERT INTO appointments(id,userId,staffId,serviceId,serviceName,staffName,price,duration,name,phone,email,date,start,end,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', id, admin ? null : user.id, staff.id, service.id, service.name, staff.name, service.price, service.duration, name, phone, admin ? '' : user.email, b.date, start, start + service.duration, now()); await bookingMessages(store, await get('SELECT * FROM appointments WHERE id=?', id)); await audit(user.id, 'booking-created', id); });
-                return json(201, publicBooking(await get('SELECT * FROM appointments WHERE id=?', id)));
+                if(admin) ownerOnly(user);
+                await requireOperationalProfile();
+                throttle(`booking:${user.id}`,40);
+                check(typeof b.service==='string'&&b.service.length<=80,'Selecione um serviço.');
+                const name=admin?clean(b.name,80):user.name,phone=String(b.phone||'').replace(/\D/g,'');
+                check(name.length>=2&&/^\d{10,13}$/.test(phone),'Informe nome e telefone com DDD.');
+                check(typeof b.staff==='string'&&b.staff.length<=80&&validDate(b.date,false),'Confira profissional e data.');
+                const start=parseTime(b.time),key=req.headers['idempotency-key']||'';
+                check(!key||(/^[a-zA-Z0-9_-]{16,128}$/.test(key)),'Chave de repetição inválida.');
+                const fingerprint=hash(JSON.stringify({admin,service:b.service,staff:b.staff,date:b.date,start,name,phone}));
+                const result=await transaction(async()=>{
+                    if(key){const prior=await get('SELECT * FROM booking_keys WHERE userId=? AND key=?',user.id,key);
+                        if(prior){check(prior.fingerprint===fingerprint,'Essa chave já foi usada com outro pedido.',409);return {booking:await get('SELECT * FROM appointments WHERE id=?',prior.bookingId),replayed:true};}}
+                    const service=await get('SELECT * FROM services WHERE id=? AND active=1',b.service);
+                    check(service,'Serviço indisponível.');
+                    const staff=await ensureSlot(store,b.staff,b.date,start,service.duration),id=randomUUID();
+                    await run('INSERT INTO appointments(id,userId,staffId,serviceId,serviceName,staffName,price,duration,name,phone,email,date,start,end,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',id,admin?null:user.id,staff.id,service.id,service.name,staff.name,service.price,service.duration,name,phone,admin?'':user.email,b.date,start,start+service.duration,now());
+                    if(key)await run('INSERT INTO booking_keys VALUES(?,?,?,?,?)',user.id,key,fingerprint,id,now());
+                    const booking=await get('SELECT * FROM appointments WHERE id=?',id);
+                    await bookingMessages(store,booking);await audit(user.id,'booking-created',id);
+                    return {booking,replayed:false};
+                });
+                return json(result.replayed?200:201,{...publicBooking(result.booking),replayed:result.replayed});
             }
             const match = pathname.match(/^\/api\/(?:admin\/)?bookings\/([a-f0-9-]+)$/);
             if (match && (method === 'PATCH' || method === 'DELETE')) {
-                const booking = await ownBooking(user, match[1], req);
+                let booking = await ownBooking(user, match[1], req);
                 if (pathname.includes('/admin/'))
                     ownerOnly(user);
                 if (method === 'DELETE' || b.status === 'cancelled') {
                     check(booking.status === 'confirmed', 'Apenas reservas confirmadas podem ser canceladas.');
                     await cancelAllowed(user, booking);
-                    await transaction(async () => { await run("UPDATE appointments SET status='cancelled',version=version+1 WHERE id=?", booking.id); await bookingMessages(store, await get('SELECT * FROM appointments WHERE id=?', booking.id), 'cancellation'); await audit(user.id, 'booking-cancelled', booking.id); });
+                    await transaction(async () => { booking=await ownBooking(user,match[1],req);check(booking.status==='confirmed','A reserva já foi alterada. Atualize a agenda.',409); await run("UPDATE appointments SET status='cancelled',version=version+1 WHERE id=?", booking.id); await bookingMessages(store, await get('SELECT * FROM appointments WHERE id=?', booking.id), 'cancellation'); await audit(user.id, 'booking-cancelled', booking.id); });
                     return json(200, { ok: true });
                 }
                 if (b.status) {
                     ownerOnly(user);
                     check(['completed', 'no_show'].includes(b.status) && booking.status === 'confirmed', 'Mudança de status inválida.');
                     check(stamp(booking.date, booking.start) <= now(), 'Marque atendimento ou falta somente após o início do horário.');
-                    await transaction(async () => { await run('UPDATE appointments SET status=?,version=version+1 WHERE id=?', b.status, booking.id); await run("UPDATE outbox SET status='cancelled' WHERE bookingId=? AND kind='reminder' AND status IN ('pending','failed')", booking.id); await audit(user.id, 'booking-' + b.status, booking.id); });
+                    await transaction(async () => { booking=await ownBooking(user,match[1],req);check(booking.status==='confirmed','A reserva já foi alterada. Atualize a agenda.',409); await run('UPDATE appointments SET status=?,version=version+1 WHERE id=?', b.status, booking.id); await run("UPDATE outbox SET status='cancelled' WHERE bookingId=? AND kind='reminder' AND status IN ('pending','failed')", booking.id); await audit(user.id, 'booking-' + b.status, booking.id); });
                     return json(200, { ok: true });
                 }
                 check(booking.status === 'confirmed', 'Apenas reservas confirmadas podem ser alteradas.');
                 await cancelAllowed(user, booking);
                 const start = parseTime(b.time);
-                await transaction(async () => { const staff = await ensureSlot(store, b.staff || booking.staffId, b.date, start, booking.duration, booking.id); await run('UPDATE appointments SET date=?,start=?,end=?,staffId=?,staffName=?,version=version+1 WHERE id=?', b.date, start, start + booking.duration, staff.id, staff.name, booking.id); await bookingMessages(store, await get('SELECT * FROM appointments WHERE id=?', booking.id), 'rescheduled'); await audit(user.id, 'booking-rescheduled', booking.id); });
+                await transaction(async () => { booking=await ownBooking(user,match[1],req);check(booking.status==='confirmed','A reserva já foi alterada. Atualize a agenda.',409);await cancelAllowed(user,booking); const staff = await ensureSlot(store, b.staff || booking.staffId, b.date, start, booking.duration, booking.id); await run('UPDATE appointments SET date=?,start=?,end=?,staffId=?,staffName=?,version=version+1 WHERE id=?', b.date, start, start + booking.duration, staff.id, staff.name, booking.id); await bookingMessages(store, await get('SELECT * FROM appointments WHERE id=?', booking.id), 'rescheduled'); await audit(user.id, 'booking-rescheduled', booking.id); });
                 return json(200, { ok: true });
             }
             if (pathname.startsWith('/api/admin/')) {
@@ -252,6 +270,13 @@ const server = http.createServer(async (req, res) => {
                 }
                 if (pathname === '/api/admin/catalog' && method === 'GET')
                     return json(200, { settings: await get('SELECT * FROM shop WHERE id=1'), services: await all('SELECT * FROM services ORDER BY rowid'), staff: await all('SELECT * FROM staff ORDER BY rowid') });
+                if(pathname==='/api/admin/legal'&&method==='GET')return json(200,await legalProfile());
+                if(pathname==='/api/admin/legal'&&method==='PUT'){
+                    const profile={operatorName:clean(b.operatorName,120),businessId:clean(b.businessId,40),address:clean(b.address,300),privacyEmail:email(b.privacyEmail),retention:clean(b.retention,1200),enabled:b.enabled===true,version:'2026-11-14'};
+                    check(!profile.enabled||(profile.operatorName.length>=2&&profile.address.length>=8&&validEmail(profile.privacyEmail)&&profile.retention.length>=20),'Para liberar o sistema, preencha identificação, endereço, contato privado e política de conservação.');
+                    await run("INSERT OR REPLACE INTO meta(key,value) VALUES('business-profile',?)",JSON.stringify(profile));
+                    await audit(user.id,'legal-updated');return json(200,{ok:true});
+                }
                 if (pathname === '/api/admin/settings' && method === 'PUT') {
                     const name = clean(b.name, 60), phone = String(b.phone || '').replace(/\D/g, ''), address = clean(b.address, 300), description = clean(b.description, 500), cancelHours = Number(b.cancelHours);
                     check(name.length >= 2 && (!phone || /^\d{10,13}$/.test(phone)) && Number.isInteger(cancelHours) && cancelHours >= 0 && cancelHours <= 72, 'Confira nome, WhatsApp e antecedência de cancelamento (0 a 72h).');
@@ -340,7 +365,7 @@ const server = http.createServer(async (req, res) => {
             }
             throw new AppError(404, 'Rota não encontrada.');
         }
-        const staticFiles = { '/': 'index.html', '/admin': 'admin.html', '/admin/': 'admin.html', '/app.js': 'app.js', '/admin.js': 'admin.js', '/common.js': 'common.js', '/assets/logo-barbearia.png': 'assets/logo-barbearia.png', '/theme.css': 'theme.css', '/assets/barbearia-interior.png': 'assets/barbearia-interior.png', '/assets/corte-degrade.png': 'assets/corte-degrade.png', '/assets/ritual-barba.png': 'assets/ritual-barba.png', '/style.css': 'style.css', '/admin.css': 'admin.css', '/privacidade': 'privacy.html' };
+        const staticFiles = { '/': 'index.html', '/admin': 'admin.html', '/admin/': 'admin.html', '/app.js': 'app.js', '/admin.js': 'admin.js', '/common.js': 'common.js', '/assets/logo-barbearia.png': 'assets/logo-barbearia.png', '/theme.css': 'theme.css', '/assets/barbearia-interior.png': 'assets/barbearia-interior.png', '/assets/corte-degrade.png': 'assets/corte-degrade.png', '/assets/ritual-barba.png': 'assets/ritual-barba.png', '/style.css': 'style.css', '/admin.css': 'admin.css', '/privacidade': 'privacy.html', '/termos':'terms.html', '/legal.js':'legal.js', '/site.css':'site.css' };
         let file = staticFiles[pathname], absolute;
         if (file)
             absolute = path.join(root, 'public', file);
@@ -371,8 +396,9 @@ const background = setInterval(() => { workMessages().catch(console.error);clean
 background.unref();
 const backupTimer = setInterval(() => {if(!store.remote)store.snapshot().catch(console.error);}, 24 * 3600e3);
 backupTimer.unref();
+server.on('error',async error=>{console.error(error.code==='EADDRINUSE'?`A porta ${port} está ocupada. Defina PORT=3001 no .env ou encerre a outra instância.`:'Não foi possível iniciar o servidor: '+error.message);clearInterval(background);clearInterval(backupTimer);await store.close();process.exit(1);});
 server.listen(port, process.env.HOST || (production ? '0.0.0.0' : '127.0.0.1'), async () => {
-    console.log(`Traço disponível em ${publicURL || 'http://localhost:' + port}`);
+    console.log(`Barbearia disponível em ${publicURL || 'http://localhost:' + port}`);
     if (!await get("SELECT 1 FROM users WHERE role='owner'"))
         console.log(store.remote?'Primeiro acesso: abra /admin e use o código definido em SETUP_TOKEN na hospedagem.':`Primeiro acesso: abra /admin. O código está em ${store.setupPath}`);
     if (!store.remote && process.env.DISABLE_BACKUPS !== '1')

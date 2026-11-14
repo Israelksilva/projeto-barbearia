@@ -1,4 +1,6 @@
-# Barbearia Teste — versão 3.0
+> **Versão integrada 3.1.0:** leia [BACKEND-PRONTO.md](BACKEND-PRONTO.md). A página da raiz é a demonstração GitHub Pages; o servidor Node serve a aplicação operacional de `public/`, com API e sessões na mesma origem. A rota autenticada de pedidos já foi implementada. Produção exige configuração e liberação pelo proprietário.
+
+# Barbearia Teste — versão 3.1
 
 Agendamento de uma barbearia por instalação, com página pública, painel do proprietário, serviços, equipe, contas de clientes, remarcação, cancelamento e personalização. Tema preto e dourado, logo enviada pelo proprietário e imagens ilustrativas.
 

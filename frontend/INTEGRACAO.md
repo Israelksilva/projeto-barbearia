@@ -1,24 +1,18 @@
-# Frontend comercial — configuração e integração
+# Integração implementada na versão 3.1
 
-O site público é index.html na raiz + frontend/ + public/assets/. No GitHub Pages selecione main / (root). Nenhuma chave privada deve aparecer no frontend.
+A versão operacional é public/index.html servida pelo Node em /. Ela usa public/common.js + public/app.js, cookies HttpOnly e a API na mesma origem. Abra a URL do servidor/Render, não GitHub Pages.
 
-## Personalizar para cada cliente
-Edite frontend/config.js: name, address, hours, whatsapp (55 + DDD + número), serviços (price em centavos, duration em minutos). Preços iniciais do projeto: corte 4500, barba 3500, combo 7000. Substitua fotos ilustrativas e logo em public/assets e personalize os textos, identificação da barbearia e privacidade. Sem número configurado não há link de WhatsApp. Sem API, o formulário apenas revisa/copia o pedido; não salva reservas nem envia dados. No WhatsApp o cliente precisa enviar a mensagem e aguardar confirmação.
+Rotas principais:
+GET /api/catalog — configurações, serviços, equipe, estado da operação e hoje.
+POST /api/auth/setup — primeiro proprietário com código privado de instalação.
+POST /api/auth/register, /api/auth/login, /api/auth/logout — sessão de usuário.
+GET /api/slots?date=YYYY-MM-DD&staff=ID&service=ID — disponibilidade real.
+POST /api/booking-requests — reserva AUTENTICADA, alias de /api/bookings; corpo {service,staff,date,time,phone}. Nome/e-mail vêm da conta, preço/duração do catálogo. Idempotency-Key com 16–128 letras/dígitos/_/-; frontend envia UUID. Resposta 201 na criação, 200 no retry, incluindo id,status,price,duration e replayed. Retry de reserva cancelada retorna o status atual sem recriar. Payload divergente com mesma chave retorna 409.
+GET /api/bookings — reservas da própria conta.
+PATCH ou DELETE /api/bookings/ID — remarcação/cancelamento conforme regra e propriedade.
+GET/PUT /api/admin/legal — identificação/retencão/liberação, somente proprietário.
+Demais /api/admin/* — serviços, equipe, expediente, bloqueios, agenda, CSV, backup e auditoria, somente proprietário.
 
-## API proposta (a implementar)
-Defina apiBaseUrl HTTPS, sem /api final. frontend/api.js é o único adaptador de transporte. O backend Node anterior permanece preservado; ele NÃO implementa ainda POST /api/booking-requests. Não basta apontar a URL para ele: implemente a rota abaixo ou adapte para a autenticação existente. O modo online falha de forma explícita se o catálogo ou os horários não forem válidos.
+Para mutações, Origin deve coincidir com PUBLIC_URL/RENDER_EXTERNAL_URL e Content-Type application/json. Não liberar CORS indiscriminadamente. A página demonstrativa de raiz e frontend/site.js continuam isolados e sem tráfego real por demo=true. Seu adaptador api.js é legado da preparação visual; não é o cliente utilizado na aplicação Node e não deve ser ativado como formulário público anônimo.
 
-GET /api/catalog -> {services:[{id,name,description,price,duration}],staff:[{id,name}]}. Inteiros em centavos/minutos.
-GET /api/slots?date=YYYY-MM-DD&staff=ID&service=ID -> {slots:["09:00","09:30"]}. Strings HH:mm no fuso local do estabelecimento.
-POST /api/booking-requests -> {service,staff,name,phone,date,time,notes,consent:true}. Cabeçalho Idempotency-Key UUID por tentativa lógica. Resposta 200/201: {id:"codigo",status:"pending"|"confirmed"}. Só confirmed significa reserva confirmada. Pending precisa de confirmação posterior pelo estabelecimento. 409: horário ocupado; 429: limite de tentativas. O cliente reutiliza a chave em retries e aplica timeout de 15s. Em timeout o resultado pode ser incerto; não mostrar sucesso automaticamente.
-
-## Responsabilidades obrigatórias do backend
-Validar e limitar campos no servidor; determinar preço/duração pelo catálogo, nunca aceitar preço enviado pelo cliente. Validar datas no fuso da barbearia e regras de expediente. Impedir conflitos atomicamente e persistir a idempotência com comparação do payload. Autenticar e autorizar painel e operações de consulta/cancelamento. A rota proposta é pública e necessita limite de tentativas e proteção contra abuso. Configurar CORS apenas para a origem do site (https://israelksilva.github.io, sem caminho), preflight OPTIONS para Content-Type e Idempotency-Key, HTTPS e política de retenção. Não colocar Turso tokens ou SETUP_TOKEN no config.js. O frontend não utiliza cookies de autenticação nessa rota pública. Mudar esse modelo exige adaptar credenciais/CORS/CSRF.
-
-## Validação antes de vender operação
-Página pronta para apresentação não equivale a sistema operacional completo. Confirmar preços, contato, endereço, expediente e direitos das imagens; preencher identificação e política de privacidade; testar WhatsApp real. Para ativar reservas, implementar API, testar concorrência, fusos, indisponibilidade, retries, permissões, backups e fluxo completo com clientes em dispositivos diferentes. Login e painel da versão Node não são publicados como funcionalidades da página estática.
-
-Checks: node --test frontend/api.test.mjs; node --check frontend/site.js.
-
-## Revisão brasileira
-config.demo=true desativa transmissão por API/WhatsApp e usa dados fictícios. O payload proposto substitui consent por privacyNoticeAcknowledged:true (ciência, não consentimento geral). Leia CONFORMIDADE-BR.md antes de ativar e atualize o contrato do backend para esse campo. GitHub Pages permanece apenas demonstração.
+Leia BACKEND-PRONTO.md e CONFORMIDADE-BR.md. Não basta copiar token para o frontend; nenhum segredo deve sair do servidor. E-mail/pagamento/WhatsApp automático não são ativados por esta integração.
